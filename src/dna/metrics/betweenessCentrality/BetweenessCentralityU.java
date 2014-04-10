@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Stack;
 
@@ -36,6 +37,19 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 
 	public BetweenessCentralityU() {
 		super("BetweenessCentralityU", ApplicationType.AfterUpdate);
+	}
+	
+	private void sumSPs(){
+		int s = 0;
+		
+		for (Entry<Node, HashMap<Node, Integer>> e : spcs.entrySet()){
+			for(Entry<Node, Integer> ei : e.getValue().entrySet()){
+				s+= ei.getValue();
+			}
+			s--;
+		}
+		
+		this.spSum=s;
 	}
 
 	@Override
@@ -166,6 +180,8 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 			}
 		}
 
+		this.sumSPs();
+		
 		return true;
 	}
 
@@ -404,6 +420,8 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		spcs.put(root, newSpc);
 		oldSums.putAll(newASums);
 		p.putAll(newParents);
+		
+		this.sumSPs();
 
 		return true;
 	}
@@ -530,6 +548,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		p.get(dst).remove(src);
 		spcs.put(root, newSpc);
 		oldSums.putAll(newASums);
+		
+		this.sumSPs();
+		
 		return true;
 
 	}
@@ -630,6 +651,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 
 			}
 		}
+		
+		this.sumSPs();
+		
 		return true;
 	}
 
@@ -784,6 +808,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		spcs.put(root, newSpc);
 		oldSums.putAll(newASums);
 		p.putAll(newParents);
+		
+		this.sumSPs();
+		
 
 	}
 
@@ -878,6 +905,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 
 		spcs.put(root, newSpc);
 		oldSums.putAll(newASums);
+		
+		this.sumSPs();
+		
 
 	}
 
@@ -1015,6 +1045,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		spcs.put(root, newSpc);
 		oldSums.putAll(newASums);
 		p.putAll(newParents);
+		
+		this.sumSPs();
+		
 	}
 
 	private boolean adjacentLevelInsertion(Node root, Node src, Node dst) {
@@ -1139,6 +1172,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 
 		spcs.put(root, newSpc);
 		oldSums.putAll(newSums);
+		
+		this.sumSPs();
+		
 		return true;
 	}
 
@@ -1173,6 +1209,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		this.accSums.remove(node);
 		this.parents.remove(node);
 		g.removeNode(node);
+		
+		this.sumSPs();
+		
 		return true;
 	}
 
@@ -1206,6 +1245,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 		bCC.setValue(node.getIndex(), 0d);
 		// TODO this.binnedBC.incr(0d);
 		visited.put(node, 0L);
+		
+		this.sumSPs();
+		
 		return true;
 	}
 
@@ -1309,7 +1351,9 @@ public class BetweenessCentralityU extends BetweenessCentrality {
 			spcs.put(n, spc);
 			accSums.put(n, sums);
 		}
-
+		
+		this.sumSPs();
+		
 		return true;
 	}
 

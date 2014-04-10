@@ -46,7 +46,11 @@ public class PositiveFeedbackPreferenceGraph extends GraphGenerator {
 			BatchGenerator bg = new PositiveFeedbackPreferenceBatch(this.nodesToAdd);
 			Batch b = bg.generate(g);
 			b.apply(g);
+			System.out.println("Generated graph with: ");
+			((PositiveFeedbackPreferenceBatch)bg).printStats();
+			
 		}
+		
 		return g;
 	}
 

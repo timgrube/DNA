@@ -21,6 +21,8 @@ public abstract class BetweenessCentrality extends Metric {
 	protected NodeValueList bCC;
 	protected BinnedDistributionDouble binnedBC;
 	protected double bCSum;
+	protected int spSum = 0;
+	
 
 
 	public BetweenessCentrality(String name, ApplicationType type) {
@@ -32,6 +34,7 @@ public abstract class BetweenessCentrality extends Metric {
 		this.bCC = new NodeValueList("BC_Score",
 				new double[this.g.getMaxNodeIndex() + 1]);
 		this.bCSum = 0d;
+		this.spSum=0;
 		
 		this.binnedBC = new BinnedDistributionDouble("BinnedBCScore", 0.01, new double[100]);
 	}
@@ -41,6 +44,7 @@ public abstract class BetweenessCentrality extends Metric {
 		this.bCC = new NodeValueList("BC_Score",
 				new double[this.g.getMaxNodeIndex() + 1]);
 		this.bCSum = 0d;
+		this.spSum=0;
 	}
 
 	
@@ -71,7 +75,20 @@ public abstract class BetweenessCentrality extends Metric {
 	public Distribution[] getDistributions() {
 		// Distribution d1 = new Distribution("BetweenessCentrality",
 		// getDistribution(this.bC));
-		return new Distribution[] {};
+		
+		
+		if(spSum==0)
+			return new Distribution[]{};
+		
+		BinnedDistributionDouble bc = new BinnedDistributionDouble("BC-binned", 0.01, new double[100]);
+		
+		for(double d : this.bCC.getValues()){
+			double b = d/spSum;
+			System.out.println("bin: " + b);
+			bc.incr(b);
+		}
+		
+		return new Distribution[] {bc};
 
 	}
 
@@ -104,18 +121,27 @@ public abstract class BetweenessCentrality extends Metric {
 
 	@Override
 	public boolean isApplicable(Graph g) {
-		return UndirectedNode.class.isAssignableFrom(g.getGraphDatastructures()
-				.getNodeType())
-				|| DirectedNode.class.isAssignableFrom(g
+		// currently only on directed graphs
+		return DirectedNode.class.isAssignableFrom(g
 						.getGraphDatastructures().getNodeType());
+		
+		
+//		return UndirectedNode.class.isAssignableFrom(g.getGraphDatastructures()
+//				.getNodeType())
+//				|| DirectedNode.class.isAssignableFrom(g
+//						.getGraphDatastructures().getNodeType());
 	}
 
 	@Override
 	public boolean isApplicable(Batch b) {
-		return UndirectedNode.class.isAssignableFrom(b.getGraphDatastructures()
-				.getNodeType())
-				|| DirectedNode.class.isAssignableFrom(b
-						.getGraphDatastructures().getNodeType());
+		// currently only on directed graphs
+		return DirectedNode.class.isAssignableFrom(g
+				.getGraphDatastructures().getNodeType());
+
+//		return UndirectedNode.class.isAssignableFrom(g.getGraphDatastructures()
+//			.getNodeType())
+//			|| DirectedNode.class.isAssignableFrom(g
+//				.getGraphDatastructures().getNodeType());
 	}
 	
 	@Override

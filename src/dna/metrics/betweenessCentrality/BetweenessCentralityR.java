@@ -3,6 +3,7 @@ package dna.metrics.betweenessCentrality;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Stack;
 
@@ -145,21 +146,23 @@ public class BetweenessCentralityR extends BetweenessCentrality {
 					// this.bC.get(w);
 					// this.bC.put(w, currentScore + sums.get(w));
 					this.bCC.setValue(w.getIndex(), currentScore + sums.get(w));
+//					this.bCSum += d.get(w)-sums.get(w);
 					this.bCSum += sums.get(w);
 				}
 			}
+			spSum += sumParents(spc);
 		}
-		
-		bcdistribution();
-
+		System.out.println(">>>>>>>>>>>>>>>>>>>>>>>  " + spSum); // (TODO)
 		return true;
 	}
 	
-	private void bcdistribution() { // TODO
-//		for(double d : this.bCC.getValues()){
-//			binnedBC.incr(d);
-//		}
+	private int sumParents(HashMap<Node, Integer> spc) {
+		int s = 0;
 		
+		for(Entry<Node, Integer> e : spc.entrySet()){
+			s += e.getValue();
+		}
+		return s-1;
 	}
 
 

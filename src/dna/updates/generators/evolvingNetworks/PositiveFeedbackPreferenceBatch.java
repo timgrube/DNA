@@ -3,9 +3,11 @@ package dna.updates.generators.evolvingNetworks;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Random;
+import java.util.TreeSet;
 
 import dna.graph.Graph;
 import dna.graph.IElement;
+import dna.graph.edges.Edge;
 import dna.graph.nodes.DirectedNode;
 import dna.graph.nodes.Node;
 import dna.graph.nodes.UndirectedNode;
@@ -33,6 +35,22 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 	private double deltaPFP;
 	private double pPFP;
 	private double qPFP;
+
+	private int add3 = 0;
+	private int add2 = 0;
+	private int add1 = 0;
+
+	private HashSet<Edge> newlyAddedEdges;
+	
+	public void resetCounter(){
+		add1 = 0;
+		add2 = 0;
+		add3 = 0;
+	}
+	
+	public void printStats(){
+		System.out.println("Added in modes: " + add1 + "|" + add2 + "|" + add3);
+	}
 
 	/**
 	 * Adds <b>nodes</b> to the graph <br>
@@ -76,8 +94,10 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 	@Override
 	public Batch generate(Graph g) {
 		Batch b = new Batch(g.getGraphDatastructures(), g.getTimestamp(),
-				g.getTimestamp() + 1, this.nodes, 0, 0, this.nodes, 0,
+				g.getTimestamp() + 1, this.nodes, 0, 0, this.nodes*2, 0,
 				0);
+		
+		newlyAddedEdges = new HashSet<Edge>();
 		
 		growGraph(g, b);
 
@@ -94,9 +114,22 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 		int[] oldDegrees = collectOldDegrees(g);
 		int maxOldId = g.getMaxNodeIndex();
 		
+		int[] degrees = copyAndGrowArray(oldDegrees, this.nodes); 
+		
+		TreeSet<Node> addedNodes = new TreeSet<Node>();
+		for(IElement e : g.getNodes()){
+			if(e instanceof DirectedNode)
+				addedNodes.add((DirectedNode) e);
+			else if (e instanceof UndirectedNode)
+				addedNodes.add((UndirectedNode) e);
+			else throw new IllegalArgumentException("Nodetype " + e.getClass() + " not supported.");			
+		}
+		
+		
 
 		// add node by node
 		for (int i = 0; i < this.nodes; i++) {
+
 			// add new node
 			newNodes[i] = g.getGraphDatastructures().newNodeInstance(
 					g.getMaxNodeIndex() + 1 + i);
@@ -104,49 +137,63 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 
 			
 			// add links of the new node
-			double pi = Rand.rand.nextDouble();			
+			double pi = Rand.rand.nextDouble();	
+			
 			int noIgnoredNode = -1;			
 			if (pi <= 1 - pPFP - qPFP){
+				
+				add3++;
+				
 				// new node: 2 links to host nodes
 				// 1 of the host nodes: 1 link to a peer
 				
 				// calculate destination 1 - no need to ignore a node
-				Node to1 = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
-						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+//				Node to1 = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
+//						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+				Node to1 = getNPPNode(g, addedNodes, degrees, noIgnoredNode, newNodes[i], newNodes[i].getIndex());
 				
 				// calculate destination 2 - ignore destination 1
-				Node to2 = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
-						maxOldId, newNodes[i].getIndex(), to1.getIndex(), newNodes[i].getIndex());
+//				Node to2 = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
+//						maxOldId, newNodes[i].getIndex(), to1.getIndex(), newNodes[i].getIndex());
+				Node to2 = getNPPNode(g, addedNodes, degrees, to1.getIndex(), newNodes[i], newNodes[i].getIndex());
 				
 				// choose destination 1 or destination 2 randomly to be the source of the third edge
 				Node host = (Rand.rand.nextDouble() < 0.5) ? to1 : to2;
 				// calculate destination 3, ignore only the host/chosen destination/2
-				Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees, maxOldId, 
-						newNodes[i].getIndex(), host.getIndex(), host.getIndex());
+//				Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees, maxOldId, 
+//						newNodes[i].getIndex(), host.getIndex(), host.getIndex());
+				Node peer = getNPPNode(g, addedNodes, degrees, host.getIndex(), host, host.getIndex());
 				
 				// add EdgeAdditions to batch
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to1)));
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to2)));
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(host, peer)));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to1));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to2));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(host, peer));
 				
 				// increase degree of chosen nodes
 				increaseDegree(oldDegrees, newDegrees, maxOldId, new Node[]{to1, to2, host, peer, newNodes[i]});
 			} else if (pi <= 1 - pPFP){
+				add2++;
 				// new node: 1 link to a host node
 				// host node: 2 links to peers
 				
 				// calulate destination - no need to ignore a node
-				Node to = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
-						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+//				Node to = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
+//						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+				Node to = getNPPNode(g, addedNodes, degrees, noIgnoredNode, newNodes[i], newNodes[i].getIndex());
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to)));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to));
 				
 				
 				// calculate the two peers to connect the first destination with.
 				Node peer1 = null;
 				Node peer2 = null;
 				for(int j=0; j<2; j++){
-					Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
-							maxOldId, newNodes[i].getIndex(), to.getIndex(), to.getIndex());
+//					Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
+//							maxOldId, newNodes[i].getIndex(), to.getIndex(), to.getIndex());
+					Node peer = getNPPNode(g, addedNodes, degrees, to.getIndex(), to, to.getIndex());
 					if(j==0)
 						peer1 = peer;
 					else
@@ -159,31 +206,49 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 						j--;
 					} else {
 						b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(to, peer)));
+						newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(to, peer));
 					}
 				}
 				
 				// increase degree of chosen nodes
 				increaseDegree(oldDegrees, newDegrees, maxOldId, new Node[]{to, peer1, peer2, newNodes[i]});
 			} else if (pi <= 1){
+				add1++;
 				// new node: 1 link to a host node
 				// host node: 1 link to a peer
 				
 				// calculate destination node - no need to ignore a node
-				Node to = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
-						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+//				Node to = getNPPNode(g, oldDegrees, newNodes, newDegrees, 
+//						maxOldId, newNodes[i].getIndex(), noIgnoredNode, newNodes[i].getIndex());
+				Node to = getNPPNode(g, addedNodes, degrees, noIgnoredNode, newNodes[i], newNodes[i].getIndex());
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to)));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(newNodes[i], to));
 				
 				// calculate the peer to connect the destination with
-				Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees,
-						maxOldId, newNodes[i].getIndex(), to.getIndex(), to.getIndex());
+//				Node peer = getNPPNode(g, oldDegrees, newNodes, newDegrees,
+//						maxOldId, newNodes[i].getIndex(), to.getIndex(), to.getIndex());
+				Node peer = getNPPNode(g,addedNodes, degrees, to.getIndex(), to, to.getIndex());
 				b.add(new EdgeAddition(g.getGraphDatastructures().newEdgeInstance(to, peer)));
+				newlyAddedEdges.add(g.getGraphDatastructures().newEdgeInstance(to, peer));
 				
 				// increase degree of chosen node
 				increaseDegree(oldDegrees, newDegrees, maxOldId, new Node[]{to, peer, newNodes[i]});
 			}
+			addedNodes.add(newNodes[i]);
 		}
 	}
 	
+	private int[] copyAndGrowArray(int[] small, int nodes2) {
+		int[] big = new int[small.length+nodes2];
+		
+		Arrays.fill(big, 0);
+		for(int i = 0; i < small.length; i++){
+			big[i] = small[i];
+		}
+		
+		return big;
+	}
+
 	/**
 	 * increase the degree of the provided nodes by one
 	 * @param oldDegrees array with degrees of the in g contained nodes
@@ -217,63 +282,91 @@ public class PositiveFeedbackPreferenceBatch extends BatchGenerator {
 	 * @param srcNode		source node of this edge
 	 * @return				destination node
 	 */
-	private Node getNPPNode(Graph g, int[] oldDegrees, Node[] newNodes, int[] newDegrees, int maxOldId, int maxId,
-			int ignoreNode, int srcNode) {
+//	private Node getNPPNode(Graph g, int[] oldDegrees, Node[] newNodes, int[] newDegrees, int maxOldId, int maxId,
+//			int ignoreNode, int srcNode) {
+		private Node getNPPNode(Graph g, TreeSet<Node> availableNodes, int[] currentDegrees, int ignoreNode, Node src, int srcNode) {
+		
+
 		
 		int npp = -1;		
 		double sumK = 0;
 		
-		// sum on old nodes
-		for (int j = 0; j <= maxOldId; j++){ 
-			int kj = oldDegrees[j];
-			if(kj!=0)	
-				sumK += Math.pow(kj,  calcExponent(kj));
-		}
-		// sum on new nodes
-		for(int j = 0; j < (maxId-maxOldId-1); j++){
-			int kj = newDegrees[j];
+		
+		for(int j = 0; j <= availableNodes.size(); j++){ // do not iterate over currentDegrees as there are "0" entries for future nodes of this batch included!
+			int kj = currentDegrees[j];
 			if(kj!=0)
-			sumK += Math.pow(kj, calcExponent(kj));
+				sumK+= Math.pow(kj, calcExponent(kj));
 		}
+		
+		
+//		// sum on old nodes
+//		for (int j = 0; j <= maxOldId; j++){ 
+//			int kj = oldDegrees[j];
+//			if(kj!=0)	
+//				sumK += Math.pow(kj,  calcExponent(kj));
+//		}
+//		// sum on new nodes
+//		for(int j = 0; j < (maxId-maxOldId-1); j++){
+//			int kj = newDegrees[j];
+//			if(kj!=0)
+//			sumK += Math.pow(kj, calcExponent(kj));
+//		}
 		
 		double sumK2 = 0;
 		
 		
 		// get the source node, if srcNode id is > maxOldId, then is the src a new node and has to be retrieved from the new node array
-		Node src = (srcNode <= maxOldId) ? g.getNode(srcNode) : newNodes[srcNode-maxOldId-1];
+//		Node src = (srcNode <= maxOldId) ? g.getNode(srcNode) : newNodes[srcNode-maxOldId-1];
+
 		
 		// iterate over all nodes ("old" and in this batch added) to find a destination for this edge
 		while(npp <0){
 			double takeNode = Rand.rand.nextDouble();
-			// check old nodes for valid destination
-			for(int k = 0; k <= maxOldId; k++){
-				int kj = oldDegrees[k];
+			
+			for(Node n : availableNodes){
+				int kj = currentDegrees[n.getIndex()];
 				if(kj!=0)
 					sumK2 += Math.pow(kj, calcExponent(kj)) / sumK;
 				
-				Node dst = g.getNode(k);
-				if(sumK2 > takeNode && 
-						k != srcNode && 
-						k != ignoreNode && 
-						!g.containsEdge(g.getGraphDatastructures().newEdgeInstance(src, dst))){
+				Node dst = n;
+				if(sumK2 > takeNode &&
+						n.getIndex() != srcNode &&
+						n.getIndex() != ignoreNode &&
+						!g.containsEdge(g.getGraphDatastructures().newEdgeInstance(src, dst)) &&
+						!newlyAddedEdges.contains(g.getGraphDatastructures().newEdgeInstance(src, dst))){
 					return dst;
 				}
 			}
-			// check new nodes for valid destination
-			for(int k = 0; k <= maxId-maxOldId-1; k++){
-				int kj = newDegrees[k];
-				if(kj!=0)
-					sumK2 += Math.pow(kj, calcExponent(kj)) / sumK;
-				
-				Node dst = newNodes[k];
-				
-				if(sumK2 > takeNode && 
-						k+maxOldId+1 != srcNode &&
-						k+maxOldId+1 != ignoreNode && 
-						!g.containsEdge(g.getGraphDatastructures().newEdgeInstance(src, dst))){
-					return dst;
-				}
-			}
+			
+//			// check old nodes for valid destination
+//			for(int k = 0; k <= maxOldId; k++){
+//				int kj = oldDegrees[k];
+//				if(kj!=0)
+//					sumK2 += (Math.pow(kj, calcExponent(kj)) / sumK);
+//				
+//				Node dst = g.getNode(k);
+//				if(sumK2 > takeNode && 
+//						k != srcNode && 
+//						k != ignoreNode && 
+//						!g.containsEdge(g.getGraphDatastructures().newEdgeInstance(src, dst))){
+//					return dst;
+//				}
+//			}
+//			// check new nodes for valid destination
+//			for(int k = 0; k <= maxId-maxOldId-1; k++){
+//				int kj = newDegrees[k];
+//				if(kj!=0)
+//					sumK2 += (Math.pow(kj, calcExponent(kj)) / sumK);
+//				
+//				Node dst = newNodes[k];
+//				
+//				if(sumK2 > takeNode && 
+//						k+maxOldId+1 != srcNode &&
+//						k+maxOldId+1 != ignoreNode && 
+//						!g.containsEdge(g.getGraphDatastructures().newEdgeInstance(src, dst))){
+//					return dst;
+//				}
+//			}
 		}
 		// should not be reachable!
 		return null;
